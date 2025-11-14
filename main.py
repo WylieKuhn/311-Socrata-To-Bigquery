@@ -1,8 +1,12 @@
 from sodapy import Socrata
 from datetime import datetime, timedelta
-from Keys import APP_TOKEN
+from Keys import APP_TOKEN, bucket_name
 import polars as pl
+from google.cloud import storage
 
+storage_client = storage.Client()
+bucket = storage_client.get_bucket(bucket_name)
+blob = bucket.blob(f"311_Data_{datetime.now().strftime("%Y-%m-%d")}.csv")
 domain = "data.cityofnewyork.us"
 client = Socrata(domain, APP_TOKEN, timeout=100)
 
@@ -23,6 +27,9 @@ results = client.get_all(
 data = pl.DataFrame(results)
 data = data.drop("location") #contains redundant data
 
-#Will save to GCP Storage Bucket
+#Saves to local file
 data.write_csv(f"311_Data_{datetime.now().strftime("%Y-%m-%d")}.csv")
+
+#Uploads file to storage bucket
+blob.upload_from_filename(f"311_Data_{datetime.now().strftime("%Y-%m-%d")}.csv")
 
